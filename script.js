@@ -26,13 +26,6 @@ const messageInput = document.getElementById("message-input");
 const leaveBtn = document.getElementById("leave-btn");
 const userAvatar = document.getElementById("user-avatar");
 const userColorText = document.getElementById("user-color-text");
-const typingIndicator = document.createElement("div");
-typingIndicator.className = "typing-indicator";
-typingIndicator.style.opacity = "0.7";
-typingIndicator.style.fontSize = "13px";
-typingIndicator.style.marginTop = "5px";
-chatBox.parentNode.insertBefore(typingIndicator, chatForm);
-
 
 // state
 let myUsername = "";
@@ -174,38 +167,6 @@ function addMessageElement(msg) {
     el.classList.add("system-msg");
     el.textContent = msg.text || "";
     chatBox.appendChild(el);
-    // 🚨 Right-click report menu this might break
-    el.addEventListener("contextmenu", (e) => {
-      e.preventDefault();
-      if (!msg.id || !msg.username) return;
-    
-      const menu = document.createElement("div");
-      menu.textContent = "🚨 Report message";
-      menu.style.position = "fixed";
-      menu.style.top = e.clientY + "px";
-      menu.style.left = e.clientX + "px";
-      menu.style.background = "#333";
-      menu.style.color = "#fff";
-      menu.style.padding = "6px 10px";
-      menu.style.borderRadius = "6px";
-      menu.style.cursor = "pointer";
-      menu.style.boxShadow = "0 2px 6px rgba(0,0,0,0.4)";
-      menu.style.zIndex = "999";
-    
-      document.body.appendChild(menu);
-    
-      const closeMenu = () => menu.remove();
-      setTimeout(() => document.addEventListener("click", closeMenu, { once: true }), 0);
-    
-      menu.addEventListener("click", () => {
-        const reason = prompt("Why are you reporting this message?");
-        if (!reason) return;
-        socket.emit("report message", { room: myRoom, id: msg.id, reason });
-        alert("Thank you. Your report has been logged.");
-        menu.remove();
-      });
-    });
-
     chatBox.scrollTop = chatBox.scrollHeight;
     return;
   }
@@ -340,33 +301,13 @@ createConfirm.addEventListener("click", async () => {
 
 refreshBtn.addEventListener("click", fetchRooms);
 
-// ✍️ Send "typing" event when user types
-let typingTimeout;
-messageInput.addEventListener("input", () => {
-  socket.emit("typing", myRoom);
-  clearTimeout(typingTimeout);
-  typingTimeout = setTimeout(() => {
-    socket.emit("typing", null); // stop typing after delay
-  }, 1500);
-});
-
-let lastMessageTime = 0;
 chatForm.addEventListener("submit", (e) => {
   e.preventDefault();
   const text = messageInput.value.trim();
   if (!text) return;
-
-  const now = Date.now();
-  if (now - lastMessageTime < 1000) { // 1 second limit
-    alert("⚠️ Please wait a moment before sending another message.");
-    return;
-  }
-  lastMessageTime = now;
-
   socket.emit("chat message", { room: myRoom, username: myUsername, message: text, color: myColor, avatar: myAvatar });
   messageInput.value = "";
 });
-
 
 leaveBtn.addEventListener("click", () => {
   leaveRoom();
@@ -379,14 +320,6 @@ socket.on("message deleted", (id) => {
   const el = chatBox.querySelector(`[data-msg-id="${id}"]`);
   if (el) el.remove();
 });
-socket.on("user typing", (name) => {
-  typingIndicator.textContent = `✍️ ${name} is typing...`;
-  clearTimeout(typingIndicator._clear);
-  typingIndicator._clear = setTimeout(() => {
-    typingIndicator.textContent = "";
-  }, 2000);
-});
-
 
 // Init
 loadLocalIdentity();
@@ -394,4 +327,3 @@ if (!myColor) myColor = randomColor();
 if (!myAvatar && myUsername) myAvatar = myUsername.slice(0, 2).toUpperCase();
 updateAvatarUI();
 fetchRooms();
-

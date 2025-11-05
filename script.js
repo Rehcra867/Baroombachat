@@ -9,6 +9,7 @@ const createBtn = document.getElementById("create-btn");
 const refreshBtn = document.getElementById("refresh-rooms");
 const deleteRoomBtn = document.getElementById("delete-room-btn");
 const adminBtn = document.getElementById("admin-btn");
+const logsSlot = document.getElementById("logs-slot");
 
 const createModal = document.getElementById("create-modal");
 const newRoomName = document.getElementById("new-room-name");
@@ -45,18 +46,36 @@ adminBtn.addEventListener("click", () => {
       adminBtn.disabled = true;
       adminBtn.textContent = "Admin ✓";
 
-      // 🧾 add Logs button
+      // 🧾 Logs button BEFORE admin
       if (!document.getElementById("logs-btn")) {
         const logsBtn = document.createElement("button");
         logsBtn.id = "logs-btn";
-        logsBtn.textContent = "Download Logs";
-        logsBtn.addEventListener("click", () => {
-          const pass = prompt("Re-enter admin password to download logs:");
+        logsBtn.textContent = "Logs";
+        logsBtn.addEventListener("click", async () => {
+          const pass = prompt("Re-enter admin password:");
           if (!pass) return;
-          const url = `/admin/logs?pass=${encodeURIComponent(pass)}`;
-          window.open(url, "_blank");
+          try {
+            const res = await fetch(`/admin/loglist?pass=${encodeURIComponent(pass)}`);
+            if (!res.ok) return alert("Failed to get log list");
+            const files = await res.json();
+            if (!files.length) return alert("No logs found.");
+
+            const choice = prompt(
+              "Select a log to download:\n" +
+              files.map((f, i) => `${i + 1}. ${f}`).join("\n")
+            );
+            const index = parseInt(choice);
+            if (isNaN(index) || index < 1 || index > files.length) return;
+
+            const selected = files[index - 1];
+            const url = `/admin/logs?pass=${encodeURIComponent(pass)}&file=${encodeURIComponent(selected)}`;
+            window.open(url, "_blank");
+          } catch (err) {
+            console.error(err);
+            alert("Error fetching logs.");
+          }
         });
-        refreshBtn.parentElement.appendChild(logsBtn);
+        logsSlot.appendChild(logsBtn);
       }
     } else {
       alert("❌ Incorrect password");
@@ -207,7 +226,7 @@ function addMessageElement(msg) {
   chatBox.scrollTop = chatBox.scrollHeight;
 }
 
-// Join a room
+// Join / leave / chat handlers
 async function joinRoomFlow(roomToJoin, password) {
   if (!myUsername) return alert("Enter your name first.");
   myRoom = roomToJoin;

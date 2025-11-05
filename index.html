@@ -1,0 +1,80 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8" />
+  <meta name="viewport" content="width=device-width, initial-scale=1.0"/>
+  <title>🏍️ BaroombaChat</title>
+  <link rel="stylesheet" href="style.css" />
+</head>
+<body>
+  <div class="app">
+    <div class="chat-container">
+      <h1>🏍️ BaroombaChat</h1>
+
+      <!-- Lobby (start screen) -->
+      <div id="lobby" class="panel">
+        <div class="field">
+          <label>Your name</label>
+          <input id="username-input" placeholder="Your display name" />
+        </div>
+
+        <div class="field">
+          <label>Choose room</label>
+          <select id="rooms-select">
+            <option value="">-- Select a room --</option>
+          </select>
+        </div>
+
+        <div class="field-row">
+          <button id="join-btn">Join selected</button>
+          <button id="create-btn">Create new room</button>
+          <button id="refresh-rooms">Refresh rooms</button>
+          <button id="delete-room-btn" class="hidden">Delete selected</button>
+          <button id="admin-btn">Admin</button>
+        </div>
+
+      </div>
+
+      <!-- Create room modal -->
+      <div id="create-modal" class="modal hidden">
+        <div class="modal-content">
+          <h3>Create a room</h3>
+          <input id="new-room-name" placeholder="Room name" />
+          <input id="new-room-password" placeholder="(optional) room password" />
+          <div class="field-row">
+            <button id="create-room-confirm">Create</button>
+            <button id="create-room-cancel">Cancel</button>
+          </div>
+        </div>
+      </div>
+
+      <!-- Chat panel -->
+      <div id="chat-panel" class="hidden">
+        <div class="room-header">
+          <div>
+            <span id="room-name"></span>
+            <small id="room-meta"></small>
+          </div>
+          <div class="user-info">
+            <div id="user-avatar" class="avatar"></div>
+            <span id="user-color-text"></span>
+            <button id="leave-btn">Leave</button>
+          </div>
+        </div>
+
+        <div id="chat-box" class="chat-box"></div>
+
+        <form id="chat-form" class="chat-form">
+          <input id="message-input" placeholder="Type a message..." autocomplete="off" />
+          <button type="submit">Send</button>
+        </form>
+      </div>
+
+    </div>
+  </div>
+
+  <script src="/socket.io/socket.io.js"></script>
+  <script src="script.js"></script>
+</body>
+</html>
+

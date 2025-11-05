@@ -12,12 +12,22 @@ const io = new Server(server);
 app.use(express.json());
 app.use(express.static(path.join(__dirname)));
 
-const ADMIN_PASS = process.env.ADMIN_PASS || "changeme"; // 🔒 set this in Render settings
+const ADMIN_PASS = process.env.ADMIN_PASS || "changeme"; // 🔒 set this in Render
 const ROOMS_FILE = path.join(__dirname, "rooms.json");
+const LOG_FILE = path.join(__dirname, "events.log");
+
 let rooms = {};
 const MAX_MESSAGES_PER_ROOM = 500;
 
-// Load saved rooms
+// --- Logging helper ---
+function logEvent(type, data = {}) {
+  const entry = { timestamp: new Date().toISOString(), type, ...data };
+  fs.appendFile(LOG_FILE, JSON.stringify(entry) + "\n", (err) => {
+    if (err) console.error("logEvent error:", err);
+  });
+}
+
+// --- Load saved rooms ---
 if (fs.existsSync(ROOMS_FILE)) {
   try {
     rooms = JSON.parse(fs.readFileSync(ROOMS_FILE, "utf8"));
@@ -34,7 +44,7 @@ function hashPassword(pw) {
   return pw ? crypto.createHash("sha256").update(pw).digest("hex") : null;
 }
 
-// Public API
+// --- Public API ---
 app.get("/rooms", (req, res) => {
   const list = Object.keys(rooms).map((name) => ({
     name,
@@ -57,20 +67,20 @@ app.post("/rooms", (req, res) => {
     messages: [],
   };
   saveRooms();
+  logEvent("room_created", { room, by: req.ip });
   res.json({ ok: true, room });
 });
 
-// Socket.io handling
+// --- Socket.io handling ---
 io.on("connection", (socket) => {
-  socket.isAdmin = false; // default
+  socket.isAdmin = false;
 
   socket.on("admin login", (pw, cb) => {
     if (pw === ADMIN_PASS) {
       socket.isAdmin = true;
       cb({ ok: true });
-    } else {
-      cb({ ok: false });
-    }
+      logEvent("admin_login", { ip: socket.handshake.address });
+    } else cb({ ok: false });
   });
 
   socket.on("join room", ({ username, room, password, color, avatar }, cb) => {
@@ -84,6 +94,7 @@ io.on("connection", (socket) => {
         messages: [],
       };
       saveRooms();
+      logEvent("room_created", { room: roomName, by: username });
     } else if (rooms[roomName].passwordHash && !socket.isAdmin) {
       if (hashPassword(password) !== rooms[roomName].passwordHash)
         return cb({ ok: false, error: "Incorrect password" });
@@ -96,6 +107,7 @@ io.on("connection", (socket) => {
     socket.avatar = avatar;
 
     io.to(roomName).emit("system message", { text: `${username} joined` });
+    logEvent("user_joined", { room: roomName, username });
     cb({
       ok: true,
       history: rooms[roomName].messages || [],
@@ -103,12 +115,12 @@ io.on("connection", (socket) => {
     });
   });
 
-  // 💬 handle new chat message
+  // 💬 Chat messages with unique IDs
   socket.on("chat message", (data) => {
     if (!data?.room || !data?.message) return;
 
     const msg = {
-      id: crypto.randomUUID(), // ✅ unique ID
+      id: crypto.randomUUID(),
       username: data.username || socket.username,
       message: data.message,
       color: data.color || socket.color,
@@ -123,6 +135,7 @@ io.on("connection", (socket) => {
     saveRooms();
 
     io.to(data.room).emit("chat message", msg);
+    logEvent("message_posted", { room: data.room, username: msg.username, text: msg.message });
   });
 
   // 🗑️ Admin: delete message by ID
@@ -137,9 +150,9 @@ io.on("connection", (socket) => {
     list.splice(idx, 1);
     saveRooms();
     io.to(room).emit("message deleted", id);
+    logEvent("message_deleted", { room, by: socket.username, id });
     cb && cb({ ok: true });
   });
-
 
   // 🗑️ Admin: delete room
   socket.on("delete room", (room, cb) => {
@@ -148,17 +161,27 @@ io.on("connection", (socket) => {
     delete rooms[room];
     saveRooms();
     io.emit("room deleted", room);
+    logEvent("room_deleted", { room, by: socket.username });
     cb && cb({ ok: true });
   });
 
   socket.on("disconnect", () => {
-    if (socket.room && socket.username)
+    if (socket.room && socket.username) {
       io.to(socket.room).emit("system message", {
         text: `${socket.username} left the chat`,
       });
+      logEvent("user_left", { room: socket.room, username: socket.username });
+    }
   });
+});
+
+// --- Admin-only: download logs ---
+app.get("/admin/logs", (req, res) => {
+  const pass = req.header("x-admin-pass") || req.query.pass;
+  if (pass !== ADMIN_PASS) return res.status(403).send("Forbidden");
+  if (!fs.existsSync(LOG_FILE)) return res.status(404).send("No logs yet");
+  res.download(LOG_FILE, "events.log");
 });
 
 const PORT = process.env.PORT || 3000;
 server.listen(PORT, () => console.log(`Server running on ${PORT}`));
-

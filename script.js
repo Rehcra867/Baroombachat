@@ -44,6 +44,20 @@ adminBtn.addEventListener("click", () => {
       deleteRoomBtn.classList.remove("hidden");
       adminBtn.disabled = true;
       adminBtn.textContent = "Admin ✓";
+
+      // 🧾 add Logs button
+      if (!document.getElementById("logs-btn")) {
+        const logsBtn = document.createElement("button");
+        logsBtn.id = "logs-btn";
+        logsBtn.textContent = "Download Logs";
+        logsBtn.addEventListener("click", () => {
+          const pass = prompt("Re-enter admin password to download logs:");
+          if (!pass) return;
+          const url = `/admin/logs?pass=${encodeURIComponent(pass)}`;
+          window.open(url, "_blank");
+        });
+        refreshBtn.parentElement.appendChild(logsBtn);
+      }
     } else {
       alert("❌ Incorrect password");
     }
@@ -69,7 +83,7 @@ socket.on("room deleted", (room) => {
   fetchRooms();
 });
 
-// Helper functions
+// Helpers
 function randomColor() {
   const hue = Math.floor(Math.random() * 360);
   return `hsl(${hue} 70% 50%)`;
@@ -128,7 +142,7 @@ function populateRooms(list) {
 function addMessageElement(msg) {
   const el = document.createElement("div");
   el.classList.add("message");
-  if (msg.id) el.dataset.msgId = msg.id;  // ✅ store the message ID
+  if (msg.id) el.dataset.msgId = msg.id;
 
   if (!msg.username) {
     el.classList.add("system-msg");
@@ -179,9 +193,10 @@ function addMessageElement(msg) {
     delBtn.title = "Delete message";
     delBtn.addEventListener("click", () => {
       if (confirm("Delete this message?")) {
-        const index = Array.from(chatBox.children).indexOf(el);
-        socket.emit("delete message", { room: myRoom, index }, (res) => {
-          if (!res.ok) alert("Failed to delete message");
+        const msgId = el.dataset.msgId;
+        if (!msgId) return alert("Message has no ID (cannot delete).");
+        socket.emit("delete message", { room: myRoom, id: msgId }, (res) => {
+          if (!res?.ok) alert(res?.error || "Failed to delete message");
         });
       }
     });
@@ -282,8 +297,9 @@ leaveBtn.addEventListener("click", () => {
 
 socket.on("chat message", (msg) => addMessageElement(msg));
 socket.on("system message", (data) => addMessageElement({ text: data.text || data }));
-socket.on("message deleted", (index) => {
-  if (chatBox.children[index]) chatBox.children[index].remove();
+socket.on("message deleted", (id) => {
+  const el = chatBox.querySelector(`[data-msg-id="${id}"]`);
+  if (el) el.remove();
 });
 
 // Init
@@ -292,4 +308,3 @@ if (!myColor) myColor = randomColor();
 if (!myAvatar && myUsername) myAvatar = myUsername.slice(0, 2).toUpperCase();
 updateAvatarUI();
 fetchRooms();
-

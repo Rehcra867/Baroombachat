@@ -14,15 +14,24 @@ app.use(express.static(path.join(__dirname)));
 
 const ADMIN_PASS = process.env.ADMIN_PASS || "changeme"; // 🔒 set this in Render
 const ROOMS_FILE = path.join(__dirname, "rooms.json");
-const LOG_FILE = path.join(__dirname, "events.log");
+const LOG_DIR = path.join(__dirname, "logs");
+
+if (!fs.existsSync(LOG_DIR)) fs.mkdirSync(LOG_DIR);
 
 let rooms = {};
 const MAX_MESSAGES_PER_ROOM = 500;
 
-// --- Logging helper ---
+// ---- Logging with daily rotation ----
+function logFileForToday() {
+  const now = new Date();
+  const local = now.toLocaleDateString("en-AU", { timeZone: "Australia/Sydney" }); // e.g. 06/11/2025
+  const [day, month, year] = local.split("/");
+  return path.join(LOG_DIR, `${year}-${month.padStart(2, "0")}-${day.padStart(2, "0")}.log`);
+}
+
 function logEvent(type, data = {}) {
   const entry = { timestamp: new Date().toISOString(), type, ...data };
-  fs.appendFile(LOG_FILE, JSON.stringify(entry) + "\n", (err) => {
+  fs.appendFile(logFileForToday(), JSON.stringify(entry) + "\n", (err) => {
     if (err) console.error("logEvent error:", err);
   });
 }
@@ -175,12 +184,25 @@ io.on("connection", (socket) => {
   });
 });
 
-// --- Admin-only: download logs ---
+// --- Admin: list + download logs ---
+app.get("/admin/loglist", (req, res) => {
+  const pass = req.header("x-admin-pass") || req.query.pass;
+  if (pass !== ADMIN_PASS) return res.status(403).send("Forbidden");
+  const files = fs.readdirSync(LOG_DIR)
+    .filter(f => f.endsWith(".log"))
+    .sort()
+    .reverse();
+  res.json(files);
+});
+
 app.get("/admin/logs", (req, res) => {
   const pass = req.header("x-admin-pass") || req.query.pass;
   if (pass !== ADMIN_PASS) return res.status(403).send("Forbidden");
-  if (!fs.existsSync(LOG_FILE)) return res.status(404).send("No logs yet");
-  res.download(LOG_FILE, "events.log");
+  const file = req.query.file;
+  if (!file) return res.status(400).send("Missing ?file=");
+  const target = path.join(LOG_DIR, path.basename(file));
+  if (!fs.existsSync(target)) return res.status(404).send("Log not found");
+  res.download(target);
 });
 
 const PORT = process.env.PORT || 3000;

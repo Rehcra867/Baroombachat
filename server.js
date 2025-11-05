@@ -90,25 +90,6 @@ io.on("connection", (socket) => {
       cb({ ok: true });
       logEvent("admin_login", { ip: socket.handshake.address });
     } else cb({ ok: false });
-
-      // ✍️ Typing indicator
-  socket.on("typing", (room) => {
-    if (!room || !socket.username) return;
-    socket.to(room).emit("user typing", socket.username);
-  });
-
-  // 🚨 Message reports
-  socket.on("report message", ({ room, id, reason }) => {
-    if (!room || !id || !reason) return;
-    logEvent("message_report", {
-      room,
-      by: socket.username || "unknown",
-      id,
-      reason,
-    });
-    
-  });
-
   });
 
   socket.on("join room", ({ username, room, password, color, avatar }, cb) => {
@@ -226,4 +207,3 @@ app.get("/admin/logs", (req, res) => {
 
 const PORT = process.env.PORT || 3000;
 server.listen(PORT, () => console.log(`Server running on ${PORT}`));
-

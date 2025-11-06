@@ -198,6 +198,22 @@ io.on("connection", (socket) => {
     cb && cb({ ok: true });
   });
 
+  // 🧹 Admin unreport message
+  socket.on("unreport message", ({ room, id }, cb) => {
+    if (!socket.isAdmin) return cb && cb({ ok: false, error: "Not authorized" });
+    const before = reports.length;
+    reports = reports.filter(r => !(r.room === room && r.id === id));
+    if (reports.length !== before) {
+      saveReports();
+      io.to(room).emit("report removed", { id });
+      logEvent("message_unreported", { room, id, by: socket.username });
+      cb && cb({ ok: true });
+    } else {
+      cb && cb({ ok: false, error: "Not found" });
+    }
+  });
+
+  
   // Disconnect
   socket.on("disconnect", () => {
     if (socket.room && socket.username) {
@@ -236,4 +252,5 @@ app.get("/admin/reports", (req, res) => {
 
 const PORT = process.env.PORT || 3000;
 server.listen(PORT, () => console.log(`Server running on ${PORT}`));
+
 

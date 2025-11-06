@@ -46,7 +46,7 @@ adminBtn.addEventListener("click", () => {
       adminBtn.disabled = true;
       adminBtn.textContent = "Admin ✓";
 
-      // 🧾 Logs button BEFORE admin
+      // 🧾 Logs button
       if (!document.getElementById("logs-btn")) {
         const logsBtn = document.createElement("button");
         logsBtn.id = "logs-btn";
@@ -76,6 +76,45 @@ adminBtn.addEventListener("click", () => {
           }
         });
         logsSlot.appendChild(logsBtn);
+      }
+
+      // 🧾 View Reports button
+      if (!document.getElementById("reports-btn")) {
+        const reportsBtn = document.createElement("button");
+        reportsBtn.id = "reports-btn";
+        reportsBtn.textContent = "View Reports";
+        reportsBtn.addEventListener("click", async () => {
+          const pass = prompt("Re-enter admin password:");
+          if (!pass) return;
+          try {
+            const res = await fetch(`/admin/reports?pass=${encodeURIComponent(pass)}`);
+            if (!res.ok) return alert("Failed to fetch reports.");
+            const list = await res.json();
+            if (!list.length) return alert("No reports available.");
+
+            const choice = prompt(
+              "Reported messages:\n" +
+              list.map((r, i) => `${i + 1}. Room: ${r.room} | by: ${r.reporter}`).join("\n")
+            );
+            const index = parseInt(choice);
+            if (isNaN(index) || index < 1 || index > list.length) return;
+
+            const selected = list[index - 1];
+            joinRoomFlow(selected.room, "");
+            setTimeout(() => {
+              const el = chatBox.querySelector(`[data-msg-id="${selected.id}"]`);
+              if (el) {
+                el.scrollIntoView({ behavior: "smooth", block: "center" });
+                el.style.boxShadow = "0 0 10px yellow";
+                setTimeout(() => (el.style.boxShadow = ""), 2000);
+              }
+            }, 1500);
+          } catch (err) {
+            console.error(err);
+            alert("Error fetching reports.");
+          }
+        });
+        logsSlot.appendChild(reportsBtn);
       }
     } else {
       alert("❌ Incorrect password");
@@ -222,11 +261,24 @@ function addMessageElement(msg) {
     el.appendChild(delBtn);
   }
 
+  // ⚠️ Right-click to report
+  el.addEventListener("contextmenu", (e) => {
+    e.preventDefault();
+    if (isAdmin) return; // admins can't report
+    if (el.classList.contains("reported")) return alert("You already reported this message.");
+    if (confirm("Report this message?")) {
+      socket.emit("report message", { room: myRoom, id: msg.id, reporter: myUsername }, (res) => {
+        if (res.ok) el.classList.add("reported");
+        else alert(res.error || "Failed to report message");
+      });
+    }
+  });
+
   chatBox.appendChild(el);
   chatBox.scrollTop = chatBox.scrollHeight;
 }
 
-// Join / leave / chat handlers
+// Join a room
 async function joinRoomFlow(roomToJoin, password) {
   if (!myUsername) return alert("Enter your name first.");
   myRoom = roomToJoin;
@@ -314,11 +366,20 @@ leaveBtn.addEventListener("click", () => {
   fetchRooms();
 });
 
+// 🔔 Events
 socket.on("chat message", (msg) => addMessageElement(msg));
 socket.on("system message", (data) => addMessageElement({ text: data.text || data }));
 socket.on("message deleted", (id) => {
   const el = chatBox.querySelector(`[data-msg-id="${id}"]`);
   if (el) el.remove();
+});
+socket.on("message reported", ({ id }) => {
+  const el = chatBox.querySelector(`[data-msg-id="${id}"]`);
+  if (el) el.classList.add("reported");
+});
+socket.on("report removed", ({ id }) => {
+  const el = chatBox.querySelector(`[data-msg-id="${id}"]`);
+  if (el) el.classList.remove("reported");
 });
 
 // Init

@@ -291,6 +291,15 @@ async function joinRoomFlow(roomToJoin, password) {
     chatBox.innerHTML = "";
     resp.history.forEach(m => addMessageElement(m));
     updateAvatarUI();
+    
+    // Highlight any reported messages (for everyone)
+    if (resp.reported && resp.reported.length) {
+      resp.reported.forEach(id => {
+        const el = chatBox.querySelector(`[data-msg-id="${id}"]`);
+        if (el) el.classList.add("reported");
+      });
+    }
+
   });
 }
 
@@ -388,3 +397,4 @@ if (!myColor) myColor = randomColor();
 if (!myAvatar && myUsername) myAvatar = myUsername.slice(0, 2).toUpperCase();
 updateAvatarUI();
 fetchRooms();
+

@@ -15,42 +15,43 @@ app.use(express.static(path.join(__dirname)));
 const ADMIN_PASS = process.env.ADMIN_PASS || "changeme"; // 🔒 set this in Render
 const ROOMS_FILE = path.join(__dirname, "rooms.json");
 const LOG_DIR = path.join(__dirname, "logs");
+const REPORTS_FILE = path.join(__dirname, "reports.json");
 
 if (!fs.existsSync(LOG_DIR)) fs.mkdirSync(LOG_DIR);
 
 let rooms = {};
+let reports = [];
 const MAX_MESSAGES_PER_ROOM = 500;
 
-// ---- Logging with daily rotation ----
+// Load rooms & reports
+if (fs.existsSync(ROOMS_FILE)) {
+  try { rooms = JSON.parse(fs.readFileSync(ROOMS_FILE, "utf8")); } catch { rooms = {}; }
+}
+if (fs.existsSync(REPORTS_FILE)) {
+  try { reports = JSON.parse(fs.readFileSync(REPORTS_FILE, "utf8")); } catch { reports = []; }
+}
+
+// Helpers
+function saveRooms() {
+  fs.writeFileSync(ROOMS_FILE, JSON.stringify(rooms, null, 2));
+}
+function saveReports() {
+  fs.writeFileSync(REPORTS_FILE, JSON.stringify(reports, null, 2));
+}
+function hashPassword(pw) {
+  return pw ? crypto.createHash("sha256").update(pw).digest("hex") : null;
+}
 function logFileForToday() {
   const now = new Date();
-  const local = now.toLocaleDateString("en-AU", { timeZone: "Australia/Sydney" }); // e.g. 06/11/2025
+  const local = now.toLocaleDateString("en-AU", { timeZone: "Australia/Sydney" });
   const [day, month, year] = local.split("/");
   return path.join(LOG_DIR, `${year}-${month.padStart(2, "0")}-${day.padStart(2, "0")}.log`);
 }
-
 function logEvent(type, data = {}) {
   const entry = { timestamp: new Date().toISOString(), type, ...data };
   fs.appendFile(logFileForToday(), JSON.stringify(entry) + "\n", (err) => {
     if (err) console.error("logEvent error:", err);
   });
-}
-
-// --- Load saved rooms ---
-if (fs.existsSync(ROOMS_FILE)) {
-  try {
-    rooms = JSON.parse(fs.readFileSync(ROOMS_FILE, "utf8"));
-  } catch {
-    rooms = {};
-  }
-}
-
-function saveRooms() {
-  fs.writeFileSync(ROOMS_FILE, JSON.stringify(rooms, null, 2));
-}
-
-function hashPassword(pw) {
-  return pw ? crypto.createHash("sha256").update(pw).digest("hex") : null;
 }
 
 // --- Public API ---
@@ -124,7 +125,7 @@ io.on("connection", (socket) => {
     });
   });
 
-  // 💬 Chat messages with unique IDs
+  // 💬 Chat messages
   socket.on("chat message", (data) => {
     if (!data?.room || !data?.message) return;
 
@@ -147,7 +148,7 @@ io.on("connection", (socket) => {
     logEvent("message_posted", { room: data.room, username: msg.username, text: msg.message });
   });
 
-  // 🗑️ Admin: delete message by ID
+  // 🗑️ Admin delete
   socket.on("delete message", ({ room, id }, cb) => {
     if (!socket.isAdmin) return cb && cb({ ok: false, error: "Not authorized" });
     if (!rooms[room]) return cb && cb({ ok: false, error: "Room not found" });
@@ -159,32 +160,41 @@ io.on("connection", (socket) => {
     list.splice(idx, 1);
     saveRooms();
     io.to(room).emit("message deleted", id);
+    // remove from reports if it was reported
+    reports = reports.filter((r) => !(r.room === room && r.id === id));
+    saveReports();
+    io.emit("report removed", { room, id });
     logEvent("message_deleted", { room, by: socket.username, id });
     cb && cb({ ok: true });
   });
 
-  // 🗑️ Admin: delete room
-  socket.on("delete room", (room, cb) => {
-    if (!socket.isAdmin) return cb && cb({ ok: false, error: "Not authorized" });
+  // 🧾 Report message
+  socket.on("report message", ({ room, id, reporter }, cb) => {
     if (!rooms[room]) return cb && cb({ ok: false, error: "Room not found" });
-    delete rooms[room];
-    saveRooms();
-    io.emit("room deleted", room);
-    logEvent("room_deleted", { room, by: socket.username });
+    if (!id || !reporter) return cb && cb({ ok: false, error: "Missing fields" });
+
+    // avoid duplicate reports
+    if (reports.some((r) => r.room === room && r.id === id && r.reporter === reporter)) {
+      return cb && cb({ ok: false, error: "Already reported" });
+    }
+
+    reports.push({ room, id, reporter, timestamp: Date.now() });
+    saveReports();
+    io.to(room).emit("message reported", { id });
+    logEvent("message_reported", { room, id, reporter });
     cb && cb({ ok: true });
   });
 
+  // Disconnect
   socket.on("disconnect", () => {
     if (socket.room && socket.username) {
-      io.to(socket.room).emit("system message", {
-        text: `${socket.username} left the chat`,
-      });
+      io.to(socket.room).emit("system message", { text: `${socket.username} left the chat` });
       logEvent("user_left", { room: socket.room, username: socket.username });
     }
   });
 });
 
-// --- Admin: list + download logs ---
+// --- Admin endpoints for logs & reports ---
 app.get("/admin/loglist", (req, res) => {
   const pass = req.header("x-admin-pass") || req.query.pass;
   if (pass !== ADMIN_PASS) return res.status(403).send("Forbidden");
@@ -203,6 +213,12 @@ app.get("/admin/logs", (req, res) => {
   const target = path.join(LOG_DIR, path.basename(file));
   if (!fs.existsSync(target)) return res.status(404).send("Log not found");
   res.download(target);
+});
+
+app.get("/admin/reports", (req, res) => {
+  const pass = req.query.pass;
+  if (pass !== ADMIN_PASS) return res.status(403).send("Forbidden");
+  res.json(reports);
 });
 
 const PORT = process.env.PORT || 3000;

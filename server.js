@@ -118,6 +118,19 @@ io.on("connection", (socket) => {
 
     io.to(roomName).emit("system message", { text: `${username} joined` });
     logEvent("user_joined", { room: roomName, username });
+    
+    // Get list of reported message IDs for this room
+    const reportedIds = reports
+      .filter((r) => r.room === roomName)
+      .map((r) => r.id);
+
+    cb({
+      ok: true,
+      history: rooms[roomName].messages || [],
+      hasPassword: !!rooms[roomName].passwordHash,
+      reported: reportedIds, // ✅ send reported message IDs
+    });
+
     cb({
       ok: true,
       history: rooms[roomName].messages || [],
@@ -223,3 +236,4 @@ app.get("/admin/reports", (req, res) => {
 
 const PORT = process.env.PORT || 3000;
 server.listen(PORT, () => console.log(`Server running on ${PORT}`));
+

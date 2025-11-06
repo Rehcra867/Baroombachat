@@ -413,3 +413,17 @@ if (!myAvatar && myUsername) myAvatar = myUsername.slice(0, 2).toUpperCase();
 updateAvatarUI();
 fetchRooms();
 
+// === Welcome Popup ===
+window.addEventListener("load", () => {
+  const popup = document.getElementById("welcome-popup");
+  const closeBtn = document.getElementById("popup-close");
+
+  // Show popup on load
+  popup.classList.remove("hidden");
+
+  // Close button hides popup
+  closeBtn.addEventListener("click", () => {
+    popup.classList.add("hidden");
+  });
+});
+

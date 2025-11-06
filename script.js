@@ -261,10 +261,23 @@ function addMessageElement(msg) {
     el.appendChild(delBtn);
   }
 
-  // ⚠️ Right-click to report
-  el.addEventListener("contextmenu", (e) => {
-    e.preventDefault();
-    if (isAdmin) return; // admins can't report
+// Right-click: report (user) or unreport (admin)
+el.addEventListener("contextmenu", (e) => {
+  e.preventDefault();
+
+  // 🧑‍💼 Admin: unreport
+  if (isAdmin && el.classList.contains("reported")) {
+    if (confirm("Unreport this message?")) {
+      socket.emit("unreport message", { room: myRoom, id: msg.id }, (res) => {
+        if (res.ok) el.classList.remove("reported");
+        else alert(res.error || "Failed to unreport message");
+      });
+    }
+    return;
+  }
+
+  // 🙋 Normal user: report
+  if (!isAdmin) {
     if (el.classList.contains("reported")) return alert("You already reported this message.");
     if (confirm("Report this message?")) {
       socket.emit("report message", { room: myRoom, id: msg.id, reporter: myUsername }, (res) => {
@@ -272,7 +285,9 @@ function addMessageElement(msg) {
         else alert(res.error || "Failed to report message");
       });
     }
-  });
+  }
+});
+
 
   chatBox.appendChild(el);
   chatBox.scrollTop = chatBox.scrollHeight;
@@ -397,4 +412,5 @@ if (!myColor) myColor = randomColor();
 if (!myAvatar && myUsername) myAvatar = myUsername.slice(0, 2).toUpperCase();
 updateAvatarUI();
 fetchRooms();
+
 

@@ -74,57 +74,71 @@
     </div>
   </div>
 
-  <!-- Welcome Popup -->
-  <div id="welcome-popup" class="popup hidden">
-    <div class="popup-content">
-      <h2 id="popup-title">BaroombaChat Terms and Conditions</h2>
-      <p id="popup-body">
-
-        Welcome to 🏍️ BaroombaChat!
-        By using this website, you agree to follow the rules below to help keep BaroombaChat safe, friendly, and fun for everyone.
-        
-        Behaviour:
-          Be respectful. Treat all users with kindness and fairness.
-          No bullying, harassment, or discrimination of any kind.
-          No inappropriate, rude, or offensive language or content.
-          Use appropriate display names — do not impersonate others or use offensive terms.
-          Do not spam or flood rooms with unnecessary messages.
-          All actions in chat are logged, including room creation, joins, name changes, and messages, for moderation and safety purposes.
-        
-        Enforcement:
-          Admins may remove messages, delete rooms, or revoke access from users who break these rules.
-          Abuse of admin power (such as deleting rooms or messages without valid reason, harassing users, or misusing logs) will result in admin access being permanently revoked.
-          If these rules are repeatedly or severely broken, BaroombaChat may be suspended or shut down entirely to protect its users.
-        
-        Privacy:
-          Chat logs and reports are stored securely on the server and are only accessible to authorized admins.
-          Logs may include usernames, timestamps, and room data, but no private personal information is collected.
-          Logged data is used only for moderation and rule enforcement.
-      
-        
-        Reporting Messages:
-          If someone posts inappropriate or harmful content:
-          Right-click the message.
-          Click “Report this message.”
-          The message will be outlined in red, and admins will be notified.
-          Admins can right-click reported messages to unreport them after review.
-        
-        Admin Tools (For Authorized Admins Only):
-          Admins can:
-          Delete rooms or messages when necessary.
-          View and download chat logs.
-          Review reported messages in the “View Reports” panel.
-          Admins must use their powers responsibly.
-          Any misuse (deleting rooms unfairly, harassing users, or leaking logs) will result in permanent loss of admin privileges.
-      </p>
-      <button id="popup-close">I Agree</button>
+ <!-- Terms & Instructions Popup -->
+  <div id="terms-popup" class="popup">
+    <div class="popup-content scrollable">
+      <h2>🏍️ BaroombaChat – Terms & Instructions</h2>
+  
+      <div class="popup-body">
+        <h3>🧾 Terms and Conditions</h3>
+        <p>Welcome to <strong>BaroombaChat</strong>! By using this site, you agree to the following rules to keep this community safe, respectful, and fun for everyone.</p>
+  
+        <h4>🧍 Behaviour</h4>
+        <ul>
+          <li>Be respectful and treat everyone kindly.</li>
+          <li>No bullying, harassment, or discrimination of any kind.</li>
+          <li>No inappropriate or offensive language or content.</li>
+          <li>Use appropriate display names. Do not impersonate others or use rude terms.</li>
+          <li>No spam, flooding, or repeated message posting.</li>
+          <li>All chat actions (joins, messages, reports, etc.) are logged for safety and moderation.</li>
+        </ul>
+  
+        <h4>⚠️ Enforcement</h4>
+        <ul>
+          <li>Admins may remove messages, delete rooms, or restrict access for rule violations.</li>
+          <li>Abuse of admin powers (unjust deletions, harassment, misuse of logs) will result in admin access being revoked.</li>
+          <li>Repeated or severe rule-breaking may cause the entire site to be suspended or shut down.</li>
+        </ul>
+  
+        <h4>🔐 Privacy</h4>
+        <ul>
+          <li>Only basic activity (names, messages, timestamps) is stored — no personal data.</li>
+          <li>Logs are private and only visible to authorized admins.</li>
+        </ul>
+  
+        <hr>
+  
+        <h3>💬 How to Use BaroombaChat</h3>
+  
+        <h4>🪪 Setting Your Name</h4>
+        <p>Enter your display name on the start screen. This name appears beside your messages. Keep it appropriate.</p>
+  
+        <h4>🏠 Joining or Creating Rooms</h4>
+        <p>Select a room from the dropdown or create your own. Locked rooms require a password.</p>
+  
+        <h4>🔁 Refreshing Rooms</h4>
+        <p>Click <strong>“Refresh Rooms”</strong> to reload the room list.</p>
+  
+        <h4>💬 Sending Messages</h4>
+        <p>Type in the message box and press Send. Your message appears in real time to everyone in the same room.</p>
+  
+        <h4>🚨 Reporting Messages</h4>
+        <p>Right-click a message to report it for inappropriate content. Reported messages show a red outline. Admins can right-click to unreport after review.</p>
+  
+        <h4>🧑‍💼 Admin Tools</h4>
+        <p>Admins can delete messages, manage rooms, review reports, and download logs. Admin privileges must be used responsibly — misuse results in permanent loss of admin access.</p>
+      </div>
+  
+      <button id="agree-btn">I Agree</button>
     </div>
   </div>
+
   
   <script src="/socket.io/socket.io.js"></script>
   <script src="script.js"></script>
 </body>
 </html>
+
 
 
 

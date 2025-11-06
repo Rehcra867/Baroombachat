@@ -185,3 +185,7 @@ button:hover {
   font-style: italic;
   text-align: center;
 }
+
+.message.reported {
+  outline: 2px solid #ff4d4d;
+}

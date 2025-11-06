@@ -413,17 +413,24 @@ if (!myAvatar && myUsername) myAvatar = myUsername.slice(0, 2).toUpperCase();
 updateAvatarUI();
 fetchRooms();
 
-// === Welcome Popup ===
+// === Terms & Instructions Popup ===
 window.addEventListener("load", () => {
-  const popup = document.getElementById("welcome-popup");
-  const closeBtn = document.getElementById("popup-close");
+  const popup = document.getElementById("terms-popup");
+  const agreeBtn = document.getElementById("agree-btn");
 
-  // Show popup on load
-  popup.classList.remove("hidden");
+  // Show only if not accepted before
+  const accepted = localStorage.getItem("baroombachat_termsAccepted");
+  if (!accepted) {
+    popup.classList.remove("hidden");
+  }
 
-  // Close button hides popup
-  closeBtn.addEventListener("click", () => {
+  // Close popup when "I Agree" clicked
+  agreeBtn.addEventListener("click", () => {
+    localStorage.setItem("baroombachat_termsAccepted", "yes");
     popup.classList.add("hidden");
   });
 });
+
+});
+
 

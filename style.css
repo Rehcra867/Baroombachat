@@ -186,6 +186,11 @@ button:hover {
   text-align: center;
 }
 
+#logs-btn,
+#reports-btn {
+  margin-right: 8px;
+}
+
 .message.reported {
   outline: 2px solid #ff4d4d;
 }

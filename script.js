@@ -87,7 +87,7 @@ adminBtn.addEventListener("click", () => {
           const pass = prompt("Re-enter admin password:");
           if (!pass) return;
           try {
-            const res = await fetch(`/admin/reports?pass=${encodeURIComponent(pass)}`);
+            const res = await fetch(`/admin/reports`);
             if (!res.ok) return alert("Failed to fetch reports.");
             const list = await res.json();
             if (!list.length) return alert("No reports available.");
@@ -412,5 +412,6 @@ if (!myColor) myColor = randomColor();
 if (!myAvatar && myUsername) myAvatar = myUsername.slice(0, 2).toUpperCase();
 updateAvatarUI();
 fetchRooms();
+
 
 

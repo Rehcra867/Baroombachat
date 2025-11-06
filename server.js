@@ -244,13 +244,20 @@ app.get("/admin/logs", (req, res) => {
   res.download(target);
 });
 
+io.of("/").adapter.on("create-room", () => {}); // keep adapter initialized
+
 app.get("/admin/reports", (req, res) => {
-  const pass = req.query.pass;
-  if (pass !== ADMIN_PASS) return res.status(403).send("Forbidden");
+  // Only allow if called from an admin socket
+  const adminSockets = Array.from(io.sockets.sockets.values()).filter(s => s.isAdmin);
+  if (adminSockets.length === 0) {
+    return res.status(403).json({ error: "No active admin session" });
+  }
   res.json(reports);
 });
 
+
 const PORT = process.env.PORT || 3000;
 server.listen(PORT, () => console.log(`Server running on ${PORT}`));
+
 
 

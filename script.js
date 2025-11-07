@@ -430,7 +430,3 @@ window.addEventListener("load", () => {
     popup.classList.add("hidden");
   });
 });
-
-});
-
-
